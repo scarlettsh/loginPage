@@ -4,6 +4,8 @@ const ejs = require("ejs");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 require("dotenv").config();
+const encrypt = require("mongoose-encryption");
+const e = require("express");
 
 mongoose.connect(
   "mongodb+srv://admin-scarlett:" +
@@ -11,10 +13,15 @@ mongoose.connect(
     "@cluster0.y3z9a.mongodb.net/userDB"
 );
 
-const userSchema = {
+const userSchema = new mongoose.Schema({
   email: String,
   password: String,
-};
+});
+
+const encKey = process.env.ENC;
+const sigKey = process.env.SIG;
+
+userSchema.plugin(encrypt, { encryptionKey: encKey, signingKey: sigKey, excludeFromEncryption: ["email"]});
 
 const User = mongoose.model("User", userSchema);
 
@@ -41,7 +48,7 @@ app.post("/register", (req, res) => {
     password: password,
   });
 
-  User.insertMany(user, (err) => {
+  user.save((err) => {
     if (!err) {
       res.send("Sueccesfully registered");
     } else {
