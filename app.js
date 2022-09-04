@@ -4,8 +4,8 @@ const express = require("express");
 const ejs = require("ejs");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const encrypt = require("mongoose-encryption");
-const e = require("express");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 
 mongoose.connect(
   "mongodb+srv://admin-scarlett:" +
@@ -21,12 +21,9 @@ const userSchema = new mongoose.Schema({
 const encKey = process.env.ENC;
 const sigKey = process.env.SIG;
 
-userSchema.plugin(encrypt, {
-  secret: process.env.SECRET,
-  excludeFromEncryption: ["email"],
-});
-
 const User = mongoose.model("User", userSchema);
+
+
 
 const app = express();
 
@@ -44,19 +41,21 @@ app.get("/register", (req, res) => {
 
 app.post("/register", (req, res) => {
   const email = req.body.username;
-  const password = req.body.password;
 
-  const user = new User({
-    email: email,
-    password: password,
-  });
+  //salting and hashing
+  bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
+    const user = new User({
+      email: email,
+      password: hash,
+    });
 
-  user.save((err) => {
-    if (!err) {
-      res.send("Sueccesfully registered");
-    } else {
-      console.log(err);
-    }
+    user.save((err) => {
+      if (!err) {
+        res.send("Sueccesfully registered");
+      } else {
+        console.log(err);
+      }
+    });
   });
 });
 
@@ -66,13 +65,18 @@ app.get("/login", (req, res) => {
 
 app.post("/login", (req, res) => {
   const email = req.body.username;
-  const password = req.body.password;
 
   User.findOne({ email: email }, (err, foundResult) => {
     if (err) {
       console.log(err);
-    } else if (foundResult.password === password) {
-      res.render("secrets");
+    } else {
+      bcrypt.compare(req.body.password, foundResult.password, (err, result) => {
+        if (result) {
+          res.render("secrets");
+        } else {
+          res.send("password is not correct. login again.");
+        }
+      });
     }
   });
 });
