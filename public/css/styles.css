@@ -11,6 +11,11 @@ body {
 .secret-text {
   text-align: center;
   font-size: 2rem;
-  color: #fff;
-  background-color: #000;
+  color: rgb(246, 133, 58);
+  background-color: rgba(250, 196, 21, 0.35);
+}
+
+.img-corgi {
+  width: 50%;
+  height: auto;
 }

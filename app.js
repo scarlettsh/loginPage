@@ -9,6 +9,7 @@ const LocalStrategy = require("passport-local"); //for autheticating the usernam
 const session = require("express-session");
 const passportLocalMongoose = require("passport-local-mongoose");
 
+
 mongoose.connect(
   "mongodb+srv://admin-scarlett:" +
     process.env.mongodbPass +
@@ -29,12 +30,13 @@ app.use(session({
   secret: "i am a secret", // gererally, use .env to access secret here
   resave: false,
   saveUninitialized: false,
-  cookie: {secure: true}
 }))
 
 // config passport 
 app.use(passport.initialize());  //
 app.use(passport.session()); 
+
+app.use(express.static("public"));
 
 //confi passport-local mongoose and plugin it
 const userSchema = new mongoose.Schema({
@@ -46,7 +48,7 @@ userSchema.plugin(passportLocalMongoose);
 const User = mongoose.model("User", userSchema);
 
 //configure passport and passport-local strategy
-passport.use(new LocalStrategy(User.authenticate()));
+passport.use(User.createStrategy());
 
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
@@ -65,23 +67,22 @@ app.get("/login", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-  console.log(req.body.username, req.body.password);// can console logged out
   User.register({
     username: req.body.username,
-  }),
+  },
   req.body.password,
   (err, user)=>{
     if(err){
       console.log(err);
       res.redirect("/register");
     }else{
-      passport.authenticate("local")(req, result, () => {
-        result.redirect("/secrets");
+      passport.authenticate("local")(req, res, () => {
+        res.redirect("/secrets");
       })
     }
 
       
-    }
+    });
   }
 );
 app.get("/secrets", (req, res)=> {
@@ -91,12 +92,33 @@ app.get("/secrets", (req, res)=> {
     res.redirect("/login");
   }
 })
-app.post("/login", (req, res) => {});
+app.post("/login", (req, res) => {
+  const user = new User({
+    username: req.body.username,
+    password: req.body.password
+  });
+  req.login(user, (err) => {
+    if(err){
+      console.log(err);
+    }else{
+      passport.authenticate("local")(req, res, ()=>{
+        res.redirect("/secrets");
+      })
+    }
+  })
+});
 
-app.get("/logout", (req, res) => {});
+app.get("/logout", (req, res) => {
+  req.logout((err) => {
+    if(err){
+      console.log(err);
+    }
+  });
+  res.redirect("/");
+});
 
 app.get("/submit", (req, res) => {});
 
-app.listen(3000, (req, res) => {
+app.listen(process.env.PORT || 3000, (req, res) => {
   console.log("Server started");
 });
